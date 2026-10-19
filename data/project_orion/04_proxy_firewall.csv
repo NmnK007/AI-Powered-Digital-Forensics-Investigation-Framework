@@ -1,0 +1,4 @@
+timestamp,timezone,src_ip,dst_ip,domain,port,method,bytes_sent,action
+2026-09-08 23:10:00,Asia/Kolkata,10.0.1.20,198.51.100.12,api.github.com,443,GET,1420,allowed
+2026-09-08 23:57:12,Asia/Kolkata,10.0.1.45,198.51.100.88,temp-dropfile-share.org,443,POST,50541312,allowed
+2026-09-09 00:02:15,Asia/Kolkata,10.0.1.45,198.51.100.88,temp-dropfile-share.org,443,GET,2048,allowed

@@ -1,0 +1,5 @@
+timestamp,timezone,user,host,source_ip,action,status,auth_method
+2026-09-08 22:15:00,Asia/Kolkata,sarah,WS-02,10.0.1.20,login,success,kerberos
+2026-09-08 22:30:15,Asia/Kolkata,david,WS-05,10.0.1.25,login,success,kerberos
+2026-09-08 23:45:10,Asia/Kolkata,alex,WS-07,203.0.113.24,login,success,vpn_external_ip
+2026-09-08 23:46:02,Asia/Kolkata,alex,WS-07,10.0.1.45,privilege_escalation,success,sudo_elevation

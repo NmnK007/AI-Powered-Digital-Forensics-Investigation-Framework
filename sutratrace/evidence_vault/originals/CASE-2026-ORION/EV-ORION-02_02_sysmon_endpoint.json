@@ -1,0 +1,32 @@
+[
+  {
+    "timestamp": "2026-09-08 23:48:15",
+    "timezone": "Asia/Kolkata",
+    "host": "WS-07",
+    "user": "alex",
+    "event_type": "ProcessCreate",
+    "image": "C:\\Windows\\System32\\cmd.exe",
+    "command_line": "cmd.exe /c whoami /priv",
+    "parent_process": "explorer.exe"
+  },
+  {
+    "timestamp": "2026-09-08 23:51:22",
+    "timezone": "Asia/Kolkata",
+    "host": "WS-07",
+    "user": "alex",
+    "event_type": "ProcessCreate",
+    "image": "C:\\Program Files\\7-Zip\\7z.exe",
+    "command_line": "7z.exe a -tzip C:\\Users\\alex\\AppData\\Local\\Temp\\Project-Orion.zip C:\\Engineering\\Blueprints\\*",
+    "parent_process": "cmd.exe"
+  },
+  {
+    "timestamp": "2026-09-08 23:51:58",
+    "timezone": "Asia/Kolkata",
+    "host": "WS-07",
+    "user": "alex",
+    "event_type": "FileCreate",
+    "image": "C:\\Program Files\\7-Zip\\7z.exe",
+    "target_file": "C:\\Users\\alex\\AppData\\Local\\Temp\\Project-Orion.zip",
+    "sha256": "7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069"
+  }
+]

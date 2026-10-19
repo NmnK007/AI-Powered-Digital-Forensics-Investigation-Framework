@@ -1,0 +1,18 @@
+[
+  {
+    "timestamp": "2026-09-08 23:38:00",
+    "timezone": "Asia/Kolkata",
+    "user": "alex",
+    "action": "GetObject",
+    "resource": "s3://corporate-blueprints-prod/avionics_schematic_v2.cad",
+    "source_ip": "203.0.113.24"
+  },
+  {
+    "timestamp": "2026-09-08 23:39:15",
+    "timezone": "Asia/Kolkata",
+    "user": "alex",
+    "action": "ListBucket",
+    "resource": "s3://corporate-blueprints-prod/",
+    "source_ip": "203.0.113.24"
+  }
+]

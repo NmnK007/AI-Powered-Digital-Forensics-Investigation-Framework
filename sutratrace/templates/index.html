@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SutraTrace — AI-Powered Digital Forensics Investigation Framework</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Cytoscape.js for Evidence Graph -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- Top Navigation Header -->
+    <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50 px-6 py-3 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-lg bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                <i data-lucide="shield-search" class="w-6 h-6 text-white"></i>
+            </div>
+            <div>
+                <div class="flex items-center space-x-2">
+                    <span class="text-xl font-black tracking-tight text-white">SutraTrace</span>
+                    <span class="px-2 py-0.5 text-xs font-semibold rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">DFIR v1.0</span>
+                </div>
+                <p class="text-xs text-slate-400">Evidence Graph & Provenance Ledger</p>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <nav class="flex items-center space-x-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-sm">
+            <button onclick="switchTab('overview')" id="tab-overview" class="nav-tab px-3.5 py-1.5 rounded-lg font-medium flex items-center space-x-2 transition bg-indigo-600 text-white shadow-sm">
+                <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                <span>Command Center</span>
+            </button>
+            <button onclick="switchTab('evidence')" id="tab-evidence" class="nav-tab px-3.5 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white flex items-center space-x-2 transition">
+                <i data-lucide="database" class="w-4 h-4"></i>
+                <span>Evidence Vault</span>
+            </button>
+            <button onclick="switchTab('timeline')" id="tab-timeline" class="nav-tab px-3.5 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white flex items-center space-x-2 transition">
+                <i data-lucide="git-commit" class="w-4 h-4"></i>
+                <span>Normalized Timeline</span>
+            </button>
+            <button onclick="switchTab('graph')" id="tab-graph" class="nav-tab px-3.5 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white flex items-center space-x-2 transition">
+                <i data-lucide="network" class="w-4 h-4"></i>
+                <span>Correlation Graph</span>
+            </button>
+            <button onclick="switchTab('ai')" id="tab-ai" class="nav-tab px-3.5 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white flex items-center space-x-2 transition">
+                <i data-lucide="brain-circuit" class="w-4 h-4"></i>
+                <span>AI Assistant & Triage</span>
+            </button>
+            <button onclick="switchTab('report')" id="tab-report" class="nav-tab px-3.5 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white flex items-center space-x-2 transition">
+                <i data-lucide="file-check-2" class="w-4 h-4"></i>
+                <span>Legal Report & Audit</span>
+            </button>
+        </nav>
+
+        <!-- Right Quick Actions -->
+        <div class="flex items-center space-x-2">
+            <button onclick="reloadOrionDemo()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg flex items-center space-x-1.5 transition">
+                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 text-indigo-400"></i>
+                <span>Reload Orion Demo</span>
+            </button>
+            <button onclick="verifyAllHashes()" class="text-xs bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 px-3 py-1.5 rounded-lg flex items-center space-x-1.5 transition">
+                <i data-lucide="check-circle" class="w-3.5 h-3.5 text-indigo-400"></i>
+                <span>Verify All Hashes</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Body -->
+    <main class="flex-1 p-6 max-w-7xl w-full mx-auto">
+
+        <!-- ==================== SCREEN 1: COMMAND CENTER ==================== -->
+        <div id="view-overview" class="view-panel space-y-6">
+            <!-- Active Case Header Banner -->
+            <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-indigo-950/40 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+                <div class="absolute -right-12 -top-12 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <div class="flex items-center space-x-3 mb-2">
+                            <span class="text-xs font-mono font-bold px-2.5 py-1 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30" id="case-id-badge">CASE-2026-ORION</span>
+                            <span class="text-xs px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Active Investigation
+                            </span>
+                            <span class="text-xs text-slate-400 font-mono" id="case-tz-badge">TZ: Asia/Kolkata (UTC+05:30)</span>
+                        </div>
+                        <h2 class="text-2xl font-bold text-white tracking-tight" id="case-title">Project Orion: Suspected After-Hours Data Exfiltration</h2>
+                        <p class="text-sm text-slate-400 mt-1 max-w-3xl" id="case-desc">
+                            Investigation into unauthorized archive creation on workstation WS-07 and outbound data exfiltration to unapproved cloud drop service.
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button onclick="openUploadModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm rounded-xl flex items-center space-x-2 shadow-lg shadow-indigo-600/30 transition">
+                            <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+                            <span>Ingest Evidence</span>
+                        </button>
+                        <button onclick="switchTab('report')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium text-sm rounded-xl flex items-center space-x-2 transition">
+                            <i data-lucide="file-text" class="w-4 h-4"></i>
+                            <span>Case Report</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Integrity & Verification Status Banner -->
+            <div id="integrity-banner" class="rounded-xl border p-4 flex items-center justify-between transition bg-emerald-950/30 border-emerald-500/30 text-emerald-300">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+                        <i data-lucide="shield-check" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-sm text-white" id="integrity-title">Evidence Integrity Status: 100% Cryptographically Verified</h4>
+                        <p class="text-xs text-slate-400" id="integrity-subtitle">All 6 evidence artifacts match their initial SHA-256 ingestion digests. Read-only originals preserved.</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button onclick="runTamperDemoOnItem()" class="text-xs bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 px-3 py-1.5 rounded-lg flex items-center space-x-1.5 transition">
+                        <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-400"></i>
+                        <span>Simulate Tamper Test</span>
+                    </button>
+                    <button onclick="verifyAllHashes()" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-3 py-1.5 rounded-lg transition">
+                        Re-Verify Hashes
+                    </button>
+                </div>
+            </div>
+
+            <!-- Metric Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition">
+                    <div class="flex items-center justify-between text-slate-400 mb-2">
+                        <span class="text-xs font-semibold uppercase tracking-wider">Ingested Items</span>
+                        <i data-lucide="files" class="w-4 h-4 text-indigo-400"></i>
+                    </div>
+                    <div class="text-3xl font-extrabold text-white" id="stat-evidence-count">6</div>
+                    <p class="text-xs text-slate-500 mt-1">Multi-source log & file artifacts</p>
+                </div>
+
+                <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition">
+                    <div class="flex items-center justify-between text-slate-400 mb-2">
+                        <span class="text-xs font-semibold uppercase tracking-wider">Normalized Events</span>
+                        <i data-lucide="activity" class="w-4 h-4 text-cyan-400"></i>
+                    </div>
+                    <div class="text-3xl font-extrabold text-white" id="stat-events-count">18</div>
+                    <p class="text-xs text-slate-500 mt-1">Correlated UTC event timeline</p>
+                </div>
+
+                <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition">
+                    <div class="flex items-center justify-between text-slate-400 mb-2">
+                        <span class="text-xs font-semibold uppercase tracking-wider">Triage Leads</span>
+                        <i data-lucide="flame" class="w-4 h-4 text-amber-400"></i>
+                    </div>
+                    <div class="text-3xl font-extrabold text-white" id="stat-findings-count">5</div>
+                    <p class="text-xs text-slate-500 mt-1">ATT&CK mapped anomaly leads</p>
+                </div>
+
+                <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition">
+                    <div class="flex items-center justify-between text-slate-400 mb-2">
+                        <span class="text-xs font-semibold uppercase tracking-wider">Audit Hash Chain</span>
+                        <i data-lucide="link" class="w-4 h-4 text-emerald-400"></i>
+                    </div>
+                    <div class="text-3xl font-extrabold text-emerald-400 flex items-center gap-1.5" id="stat-chain-status">
+                        <i data-lucide="check-check" class="w-6 h-6"></i> Intact
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1 truncate" id="stat-chain-head">Head: verified</p>
+                </div>
+            </div>
+
+            <!-- Two-Column Overview: Incident Storyline + Chain of Custody -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Left 2 Cols: Incident Progression Overview -->
+                <div class="lg:col-span-2 bg-slate-900/60 border border-slate-800 rounded-xl p-6 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-bold text-white text-base flex items-center gap-2">
+                            <i data-lucide="milestone" class="w-5 h-5 text-indigo-400"></i>
+                            Reconstructed Incident Progression
+                        </h3>
+                        <span class="text-xs text-slate-400 font-mono">Automated Multi-Source Sequence</span>
+                    </div>
+
+                    <div class="space-y-3 relative before:absolute before:inset-0 before:left-3.5 before:w-0.5 before:bg-slate-800">
+                        <div class="relative pl-8 flex items-start space-x-3">
+                            <div class="absolute left-2 top-1.5 w-3 h-3 rounded-full bg-cyan-400 ring-4 ring-slate-950"></div>
+                            <div>
+                                <span class="text-xs font-mono text-cyan-400">23:38 IST &bull; Cloud Audit</span>
+                                <p class="text-sm font-semibold text-slate-200">Cloud Blueprint Download</p>
+                                <p class="text-xs text-slate-400">User 'alex' downloaded avionics CAD schematic from S3 bucket via external IP 203.0.113.24.</p>
+                            </div>
+                        </div>
+
+                        <div class="relative pl-8 flex items-start space-x-3">
+                            <div class="absolute left-2 top-1.5 w-3 h-3 rounded-full bg-indigo-400 ring-4 ring-slate-950"></div>
+                            <div>
+                                <span class="text-xs font-mono text-indigo-400">23:45 IST &bull; Auth Log</span>
+                                <p class="text-sm font-semibold text-slate-200">Workstation Logon & Sudo Elevation</p>
+                                <p class="text-xs text-slate-400">User 'alex' logged into WS-07 from IP 203.0.113.24 and escalated privileges.</p>
+                            </div>
+                        </div>
+
+                        <div class="relative pl-8 flex items-start space-x-3">
+                            <div class="absolute left-2 top-1.5 w-3 h-3 rounded-full bg-emerald-400 ring-4 ring-slate-950"></div>
+                            <div>
+                                <span class="text-xs font-mono text-emerald-400">23:51 IST &bull; Endpoint Sysmon</span>
+                                <p class="text-sm font-semibold text-slate-200">Staging Archive Creation (7-Zip)</p>
+                                <p class="text-xs text-slate-400">7z.exe compressed engineering blueprints into 'Project-Orion.zip' (SHA256: 7f83b165...).</p>
+                            </div>
+                        </div>
+
+                        <div class="relative pl-8 flex items-start space-x-3">
+                            <div class="absolute left-2 top-1.5 w-3 h-3 rounded-full bg-amber-400 ring-4 ring-slate-950"></div>
+                            <div>
+                                <span class="text-xs font-mono text-amber-400">23:55 IST &bull; Browser Activity</span>
+                                <p class="text-sm font-semibold text-slate-200">Visit to Anonymous Drop Service</p>
+                                <p class="text-xs text-slate-400">Chrome navigated to 'https://temp-dropfile-share.org/upload' on WS-07.</p>
+                            </div>
+                        </div>
+
+                        <div class="relative pl-8 flex items-start space-x-3">
+                            <div class="absolute left-2 top-1.5 w-3 h-3 rounded-full bg-rose-400 ring-4 ring-slate-950"></div>
+                            <div>
+                                <span class="text-xs font-mono text-rose-400">23:57 IST &bull; Proxy / Firewall</span>
+                                <p class="text-sm font-semibold text-slate-200">48.2 MB Outbound Egress Transfer</p>
+                                <p class="text-xs text-slate-400">Egress proxy recorded 50,541,312 byte POST upload from WS-07 to temp-dropfile-share.org.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Col: Audit Ledger Head -->
+                <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-6 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-bold text-white text-base flex items-center gap-2">
+                                <i data-lucide="shield" class="w-5 h-5 text-emerald-400"></i>
+                                Chain of Custody
+                            </h3>
+                            <button onclick="switchTab('report')" class="text-xs text-indigo-400 hover:underline">View Full Ledger</button>
+                        </div>
+                        <p class="text-xs text-slate-400 mb-4">Every ingestion, parser execution, and hash verification is cryptographically signed and chained.</p>
+                        
+                        <div class="space-y-2 text-xs font-mono" id="overview-audit-snippet">
+                            <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+                                <div class="text-slate-500">GENESIS BLOCK &bull; 00000000...</div>
+                                <div class="text-emerald-400 mt-1">case_created: CASE-2026-ORION</div>
+                            </div>
+                            <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+                                <div class="text-slate-500">BLOCK #06 &bull; EV-ORION-06</div>
+                                <div class="text-indigo-400 mt-1">ingested: 06_cloud_audit.json</div>
+                            </div>
+                            <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+                                <div class="text-slate-500">BLOCK #12 &bull; TriageEngine</div>
+                                <div class="text-cyan-400 mt-1">triage_completed: 5 findings</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 pt-4 border-t border-slate-800">
+                        <button onclick="verifyAuditChainLive()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700 transition flex items-center justify-center space-x-1.5">
+                            <i data-lucide="fingerprint" class="w-3.5 h-3.5 text-indigo-400"></i>
+                            <span>Audit Hash Chain Verification</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== SCREEN 2: EVIDENCE VAULT ==================== -->
+        <div id="view-evidence" class="view-panel hidden space-y-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-bold text-white">Evidence Vault & Ingestion Manifest</h2>
+                    <p class="text-xs text-slate-400">ISO/IEC 27037 compliant immutable evidence storage with real-time SHA-256 verification.</p>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button onclick="verifyAllHashes()" class="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-medium flex items-center space-x-1.5 transition">
+                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-indigo-400"></i>
+                        <span>Verify All</span>
+                    </button>
+                    <button onclick="openUploadModal()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition shadow">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                        <span>Ingest New Evidence</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Evidence Table -->
+            <div class="bg-slate-900/60 border border-slate-800 rounded-xl overflow-hidden shadow">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-950/80 text-slate-400 text-xs uppercase font-semibold border-b border-slate-800">
+                            <tr>
+                                <th class="px-4 py-3">Evidence ID</th>
+                                <th class="px-4 py-3">Filename & Description</th>
+                                <th class="px-4 py-3">Source Family</th>
+                                <th class="px-4 py-3">Size</th>
+                                <th class="px-4 py-3">Initial SHA-256 Digest</th>
+                                <th class="px-4 py-3">Integrity Status</th>
+                                <th class="px-4 py-3 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="evidence-table-body" class="divide-y divide-slate-800/60 text-slate-300">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== SCREEN 3: NORMALIZED TIMELINE ==================== -->
+        <div id="view-timeline" class="view-panel hidden space-y-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-white">Cross-Source Unified Timeline</h2>
+                    <p class="text-xs text-slate-400">All heterogeneous log events normalized to UTC with explicit timestamp quality markers.</p>
+                </div>
+                <!-- Filters -->
+                <div class="flex items-center space-x-3">
+                    <div class="relative">
+                        <input type="text" id="timeline-search" oninput="filterTimeline()" placeholder="Filter keyword, IP, user..." class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 pl-8 focus:outline-none focus:border-indigo-500 w-56">
+                        <i data-lucide="search" class="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-2.5"></i>
+                    </div>
+                    <select id="timeline-lane-filter" onchange="filterTimeline()" class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                        <option value="ALL">All Source Lanes</option>
+                        <option value="Authentication / Access">Authentication / Access</option>
+                        <option value="Endpoint Process & Files">Endpoint Process & Files</option>
+                        <option value="Browser & Web Visits">Browser & Web Visits</option>
+                        <option value="Network Perimeter / Proxy">Network Perimeter / Proxy</option>
+                        <option value="Cloud Storage & IAM">Cloud Storage & IAM</option>
+                        <option value="Filesystem Directory Audit">Filesystem Directory Audit</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Timeline Event Cards Container -->
+            <div id="timeline-container" class="space-y-3">
+                <!-- Populated via JS -->
+            </div>
+        </div>
+
+        <!-- ==================== SCREEN 4: CORRELATION GRAPH ==================== -->
+        <div id="view-graph" class="view-panel hidden space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-bold text-white">Evidence & Entity Correlation Graph</h2>
+                    <p class="text-xs text-slate-400">Interactive topological relationship graph across identities, devices, files, network targets, and SHA-256 hashes.</p>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="layoutGraph('cose')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-xs rounded border border-slate-700 text-slate-200">Force-Directed</button>
+                    <button onclick="layoutGraph('concentric')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-xs rounded border border-slate-700 text-slate-200">Concentric</button>
+                    <button onclick="layoutGraph('breadthfirst')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-xs rounded border border-slate-700 text-slate-200">Hierarchical</button>
+                </div>
+            </div>
+
+            <!-- Cytoscape Canvas Container -->
+            <div class="relative bg-slate-900 border border-slate-800 rounded-xl overflow-hidden h-[620px] shadow-inner">
+                <div id="cy" class="w-full h-full"></div>
+
+                <!-- Floating Legend -->
+                <div class="absolute bottom-4 left-4 bg-slate-950/90 backdrop-blur border border-slate-800 rounded-lg p-3 text-xs space-y-1.5 shadow-lg">
+                    <div class="font-bold text-slate-300 text-[11px] uppercase tracking-wider mb-1">Entity Legend</div>
+                    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> User / Account</div>
+                    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span> Host / Workstation</div>
+                    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> File SHA-256 Hash</div>
+                    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Domain / Web URL</div>
+                    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-pink-500"></span> IP Address</div>
+                    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-cyan-500"></span> Cloud Resource</div>
+                </div>
+
+                <!-- Floating Node Inspector Drawer -->
+                <div id="graph-inspector" class="absolute top-4 right-4 w-80 bg-slate-950/95 backdrop-blur border border-slate-800 rounded-xl p-4 text-xs space-y-2.5 shadow-2xl hidden">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <span class="font-bold text-slate-200" id="inspector-title">Entity Inspector</span>
+                        <button onclick="closeInspector()" class="text-slate-400 hover:text-white">&times;</button>
+                    </div>
+                    <div id="inspector-content" class="text-slate-300 space-y-1.5">
+                        <!-- Populated on click -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== SCREEN 5: AI FORENSIC ASSISTANT & TRIAGE ==================== -->
+        <div id="view-ai" class="view-panel hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                <!-- Left Column: Triage Leads Queue (5 cols) -->
+                <div class="lg:col-span-5 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="font-bold text-white text-base flex items-center gap-2">
+                                <i data-lucide="shield-alert" class="w-5 h-5 text-amber-400"></i>
+                                Triage Anomaly Queue
+                            </h3>
+                            <p class="text-xs text-slate-400">Deterministic rule-based leads mapped to MITRE ATT&CK.</p>
+                        </div>
+                        <button onclick="retriggerTriage()" class="text-xs text-indigo-400 hover:underline">Re-run Rules</button>
+                    </div>
+
+                    <!-- Findings List -->
+                    <div id="findings-list" class="space-y-3">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+
+                <!-- Right Column: Grounded AI Assistant (7 cols) -->
+                <div class="lg:col-span-7 bg-slate-900/60 border border-slate-800 rounded-xl p-6 flex flex-col h-[700px]">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-indigo-600/30 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                                <i data-lucide="bot" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-white text-sm">Grounded Forensic Reasoning Engine</h3>
+                                <p class="text-[11px] text-slate-400">Strict evidence-bounded RAG &bull; Zero hallucinated IDs &bull; Anti-prompt injection</p>
+                            </div>
+                        </div>
+                        <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            Strict Citation Validation
+                        </span>
+                    </div>
+
+                    <!-- Quick Prompt Chips -->
+                    <div class="mb-3">
+                        <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-1.5">Investigator Quick Queries:</span>
+                        <div class="flex flex-wrap gap-1.5">
+                            <button onclick="setQuery('Which artifacts support the theory that the file left the workstation?')" class="text-[11px] bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 px-2.5 py-1 rounded-lg transition">
+                                📤 Support for file exfiltration?
+                            </button>
+                            <button onclick="setQuery('What evidence contradicts this theory or remains unproven?')" class="text-[11px] bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 px-2.5 py-1 rounded-lg transition">
+                                ⚖️ Counter-evidence & contradictions?
+                            </button>
+                            <button onclick="setQuery('Summarize all events involving the Project-Orion archive hash.')" class="text-[11px] bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 px-2.5 py-1 rounded-lg transition">
+                                🔑 Events with Orion SHA-256 hash?
+                            </button>
+                            <button onclick="setQuery('Which time windows or sources exhibit clock skew or logging gaps?')" class="text-[11px] bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 px-2.5 py-1 rounded-lg transition">
+                                ⏰ Clock skew & logging gaps?
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Chat / Response Display Area -->
+                    <div id="ai-chat-display" class="flex-1 overflow-y-auto space-y-4 pr-1">
+                        <!-- Default welcome state -->
+                        <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 text-xs text-slate-300 space-y-2">
+                            <p class="font-semibold text-white">Ask an evidence-grounded question to begin.</p>
+                            <p>Every response strictly separates:</p>
+                            <ul class="list-disc list-inside space-y-1 text-slate-400">
+                                <li><strong class="text-slate-200">Observed Records:</strong> Directly cited log events with locator proofs.</li>
+                                <li><strong class="text-slate-200">Interpretation:</strong> Cautious forensic inferences (never labeled as legal facts).</li>
+                                <li><strong class="text-slate-200">Counter-Evidence:</strong> Facts or gaps that contradict or limit the hypothesis.</li>
+                                <li><strong class="text-slate-200">Unresolved Assumptions:</strong> Explicit callouts of unknown attribution or clock skew.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Input Box -->
+                    <form onsubmit="handleAiSubmit(event)" class="mt-4 pt-3 border-t border-slate-800 flex items-center space-x-2">
+                        <input type="text" id="ai-input" placeholder="Type forensic question (e.g. 'Show events 30 mins before export')..." class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+                        <button type="submit" id="ai-submit-btn" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition shadow">
+                            <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                            <span>Ask AI</span>
+                        </button>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ==================== SCREEN 6: LEGAL REPORT & AUDIT LEDGER ==================== -->
+        <div id="view-report" class="view-panel hidden space-y-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-bold text-white">Legal Forensic Report & Cryptographic Audit Ledger</h2>
+                    <p class="text-xs text-slate-400">Certified documentation under Section 63 of Bharatiya Sakshya Adhiniyam (BSA 2023) and SWGDE guidelines.</p>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button onclick="verifyAuditChainLive()" class="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-medium flex items-center space-x-1.5 transition">
+                        <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+                        <span>Verify Audit Hash Chain</span>
+                    </button>
+                    <a href="/api/cases/CASE-2026-ORION/report/html" target="_blank" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition shadow">
+                        <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                        <span>Printable HTML / PDF</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Two Sub-tabs: Report Preview vs Audit Chain Ledger -->
+            <div class="space-y-4">
+                <div class="flex border-b border-slate-800 text-xs">
+                    <button onclick="switchReportSubtab('preview')" id="subtab-preview" class="px-4 py-2 font-semibold text-white border-b-2 border-indigo-500">Report Document</button>
+                    <button onclick="switchReportSubtab('audit')" id="subtab-audit" class="px-4 py-2 font-semibold text-slate-400 hover:text-white">Cryptographic Audit Ledger (Hash-Chain)</button>
+                </div>
+
+                <!-- Subtab 1: Report Preview -->
+                <div id="subtab-content-preview" class="bg-slate-900/60 border border-slate-800 rounded-xl p-8 space-y-6 max-h-[650px] overflow-y-auto">
+                    <div id="report-preview-markdown" class="prose prose-invert prose-sm max-w-none">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+
+                <!-- Subtab 2: Audit Ledger Chain Viewer -->
+                <div id="subtab-content-audit" class="hidden bg-slate-900/60 border border-slate-800 rounded-xl p-6 space-y-4 max-h-[650px] overflow-y-auto">
+                    <div class="flex items-center justify-between">
+                        <div class="text-xs text-slate-400">
+                            Hash formula: <code class="bg-slate-950 px-2 py-0.5 rounded text-indigo-300">event_hash = SHA256(previous_event_hash || canonical_json)</code>
+                        </div>
+                        <div id="chain-verify-status" class="text-xs font-bold text-emerald-400 flex items-center gap-1">
+                            <i data-lucide="check-circle" class="w-4 h-4"></i> Chain Intact
+                        </div>
+                    </div>
+                    <div id="audit-chain-timeline" class="space-y-3 font-mono text-xs">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Upload Evidence Modal -->
+    <div id="upload-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i data-lucide="upload" class="w-4 h-4 text-indigo-400"></i>
+                    Ingest Evidence into Case Vault
+                </h3>
+                <button onclick="closeUploadModal()" class="text-slate-400 hover:text-white text-lg">&times;</button>
+            </div>
+
+            <form onsubmit="handleUploadSubmit(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Select File</label>
+                    <input type="file" id="upload-file" required class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-300 focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Source Family</label>
+                    <select id="upload-source-type" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-300 focus:outline-none focus:border-indigo-500">
+                        <option value="auth_log">Authentication / Access Logs (CSV/JSON)</option>
+                        <option value="endpoint_process">Endpoint Process & File Logs (Sysmon/EDR)</option>
+                        <option value="browser_history">Browser History & Downloads (CSV/JSON)</option>
+                        <option value="firewall_proxy">Firewall / Egress Proxy (CSV)</option>
+                        <option value="file_inventory">Filesystem Directory & Hash Catalog (CSV)</option>
+                        <option value="cloud_audit">Cloud Object & IAM Audit Trail (JSON)</option>
+                        <option value="general">Generic Raw Log / Text</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Source & Acquisition Description</label>
+                    <input type="text" id="upload-desc" placeholder="e.g. Exported from Security Operations Gateway" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-300 focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Forensic Examiner Operator</label>
+                    <input type="text" id="upload-operator" value="Senior Forensic Examiner" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-300 focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <div class="pt-3 border-t border-slate-800 flex justify-end space-x-2">
+                    <button type="button" onclick="closeUploadModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition">Cancel</button>
+                    <button type="submit" id="upload-submit-btn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg transition flex items-center space-x-1.5">
+                        <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+                        <span>Hash & Ingest</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Review Finding Modal -->
+    <div id="review-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="text-base font-bold text-white">Examiner Review Decision</h3>
+                <button onclick="closeReviewModal()" class="text-slate-400 hover:text-white text-lg">&times;</button>
+            </div>
+            <form onsubmit="handleReviewSubmit(event)" class="space-y-3 text-xs">
+                <input type="hidden" id="review-finding-id">
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Status Decision</label>
+                    <select id="review-status" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-300 focus:outline-none focus:border-indigo-500">
+                        <option value="accepted">Accepted (Verified Forensic Finding)</option>
+                        <option value="needs_followup">Needs Follow-Up (Requires Corroboration)</option>
+                        <option value="rejected">Rejected (Refuted by Counter-Evidence)</option>
+                        <option value="reviewed">Reviewed (Noted)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Investigator Notes & Justification</label>
+                    <textarea id="review-notes" rows="3" placeholder="Enter rationale, corroborated sources, or reasons for status change..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-300 focus:outline-none focus:border-indigo-500"></textarea>
+                </div>
+                <div class="pt-3 border-t border-slate-800 flex justify-end space-x-2">
+                    <button type="button" onclick="closeReviewModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg transition">Save Decision</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Frontend Application Logic -->
+    <script src="/static/app.js"></script>
+</body>
+</html>
